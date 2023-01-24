@@ -4,6 +4,17 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="websocket-sharp">
+        <HintPath>lib\websocket-sharp\websocket-sharp.dll</HintPath>
+      </Reference>
+    </ItemGroup>
 
 </Project>
