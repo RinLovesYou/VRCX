@@ -59,6 +59,7 @@ public class Auth
             if (auth.ok)
             {
                 _myUserSession.AuthToken = auth.token;
+                _ = _myUserSession.WebRequestApi.SaveCookies();
                 return auth;
             }
         }

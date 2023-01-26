@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text;
+using System.Text.Json;
 
 namespace VrcSdk;
 
@@ -17,6 +18,7 @@ public class WebRequestApi
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
         cookies = new();
+        LoadCookies().Wait();
         var handler = new HttpClientHandler()
         {
             CookieContainer = cookies
@@ -72,5 +74,29 @@ public class WebRequestApi
             }
         }
         return (HttpStatusCode.InternalServerError, string.Empty);
+    }
+
+    public async Task SaveCookies()
+    {
+        await using var fs = File.OpenWrite("cookies.json");
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true
+        };
+        JsonSerializer.Serialize(fs, cookies.GetAllCookies(), options);
+    }
+
+    public async Task LoadCookies()
+    {
+        if (!File.Exists("cookies.json"))
+            return;
+        cookies = new();
+        await using var fs = File.OpenRead("cookies.json");
+        var cookieCollection = JsonSerializer.Deserialize<CookieCollection>(fs);
+        foreach (var cookie in cookieCollection.OfType<Cookie>())
+        {
+            cookie.Secure = true;
+        }
+        cookies.Add(cookieCollection);
     }
 }

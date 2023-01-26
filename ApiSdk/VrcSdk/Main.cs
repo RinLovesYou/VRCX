@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace VrcSdk;
+﻿namespace VrcSdk;
 
 internal class Program
 {
@@ -12,11 +10,14 @@ internal class Program
         var username = "";
         var password = "";
         userSession.Config.Fetch().Wait();
-        if (!userSession.Auth.Login(username, password).Result)
+        if (!userSession.CurrentUser.Fetch().Result)
         {
-            Console.WriteLine("Login failed");
-            Console.ReadLine();
-            return;
+            if (!userSession.Auth.Login(username, password).Result)
+            {
+                Console.WriteLine("Login failed");
+                Console.ReadLine();
+                return;
+            }
         }
         userSession.Auth.GetAuth().Wait();
         userSession.WebSocketApi.Connect();

@@ -47,15 +47,15 @@ public partial class WebSocketApi
                 case 1001 or 1005 or 1006:
                     // timeout
                     Thread.Sleep(3000);
-                    _myUserSession.Logger($"{DateTime.Now.ToString("s")}: Disconnected ({e.Code}), Attempting to reconnect...");
+                    _myUserSession.Logger($"Disconnected ({e.Code}), Attempting to reconnect...");
                     Connect();
                     break;
 
                 default:
                     // unknown error
-                    _myUserSession.Logger($"{DateTime.Now.ToString("s")}: Disconnected: {e.Code} - {e.Reason}");
+                    _myUserSession.Logger($"Disconnected: {e.Code} - {e.Reason}");
                     Thread.Sleep(3000);
-                    _myUserSession.Logger($"{DateTime.Now.ToString("s")}: Attempting to reconnect...");
+                    _myUserSession.Logger($"Attempting to reconnect...");
                     Connect();
                     break;
             }
@@ -63,11 +63,11 @@ public partial class WebSocketApi
         webSocket.OnClose += onCloseHandler;
         webSocket.OnOpen += (sender, e) =>
         {
-            _myUserSession.Logger($"{DateTime.Now.ToString("s")}: Connected");
+            _myUserSession.Logger($"Connected");
         };
         webSocket.OnError += (sender, e) =>
         {
-            _myUserSession.Logger($"{DateTime.Now.ToString("s")}: Error: " + e.Message + e.Exception);
+            _myUserSession.Logger($"Error: " + e.Message + e.Exception);
             if (webSocket.IsAlive)
                 webSocket.Close();
         };

@@ -8,6 +8,7 @@ public class UserSession
     public Config Config { get; }
     public Auth Auth { get; }
     public WebSocketApi WebSocketApi { get; }
+    public CurrentUser CurrentUser { get; }
 
     public readonly Uri ApiUrl = new("https://api.vrchat.cloud/api/1/");
     public readonly string WebSocketUrl = "wss://pipeline.vrchat.cloud";
@@ -23,6 +24,7 @@ public class UserSession
         Config = new(this);
         Auth = new(this);
         WebSocketApi = new(this);
+        CurrentUser = new(this);
 
         UserSessions.Add(this);
     }
