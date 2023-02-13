@@ -1,54 +1,77 @@
 ﻿using System.Net;
 using System.Text;
 using Newtonsoft.Json;
+using VrcSdk.Response;
+using TwoFa = VrcSdk.Request.TwoFa;
 
 namespace VrcSdk;
 
 public class Auth
 {
-    private UserSession _myUserSession;
-
-    public Auth(UserSession userSession)
+    public enum AuthResult
     {
-        _myUserSession = userSession;
+        Error,
+        Success,
+        TotpRequired,
+        EmailRequired
     }
 
-    public async Task<bool> Login(string username, string password)
+    private readonly ApiSession _myApiSession;
+
+    public Auth(ApiSession userSession)
+    {
+        _myApiSession = userSession;
+    }
+
+    public async Task<(AuthResult, string)> Login(string username, string password)
     {
         var usernameEncoded = WebUtility.UrlEncode(username);
         var passwordEncoded = WebUtility.UrlEncode(password);
         var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{usernameEncoded}:{passwordEncoded}"));
-        var (status, responseJson) = await _myUserSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
+        var (status, responseJson) = await _myApiSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
         {
             url = "auth/user",
             method = HttpMethod.Get,
-            headers = new()
+            headers = new Dictionary<string, string>
             {
                 { "Authorization", $"Basic {auth}" }
             }
         });
         if (status != HttpStatusCode.OK)
         {
-            return false;
+            _myApiSession.Logger("Login error", responseJson);
+            var errorMessage = responseJson;
+            try
+            {
+                var error = JsonConvert.DeserializeObject<Error>(responseJson);
+                errorMessage = error.error.message;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return (AuthResult.Error, errorMessage);
         }
+
         var authResponse = JsonConvert.DeserializeObject<dynamic>(responseJson);
-        if (authResponse.requiresTwoFactorAuth != null && !authResponse.requiresTwoFactorAuth.HasValues)
+        if (authResponse?.requiresTwoFactorAuth != null && !authResponse?.requiresTwoFactorAuth.HasValues)
         {
             // no 2FA required
-            return true;
+            return (AuthResult.Success, string.Empty);
         }
-        Console.WriteLine("Enter 2FA code:");
-        var code = Console.ReadLine();
-        if (authResponse.requiresTwoFactorAuth.First == "emailOtp")
+
+        if (authResponse?.requiresTwoFactorAuth.First == "emailOtp")
         {
-            return await Email2Fa(code);
+            return (AuthResult.EmailRequired, string.Empty);
         }
-        return await Totp2Fa(code);
+
+        return (AuthResult.TotpRequired, string.Empty);
     }
 
     public async Task<Response.Auth> GetAuth()
     {
-        var (status, responseJson) = await _myUserSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
+        var (status, responseJson) = await _myApiSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
         {
             url = "auth",
             method = HttpMethod.Get
@@ -58,49 +81,62 @@ public class Auth
             var auth = JsonConvert.DeserializeObject<Response.Auth>(responseJson);
             if (auth.ok)
             {
-                _myUserSession.AuthToken = auth.token;
-                _ = _myUserSession.WebRequestApi.SaveCookies();
+                _myApiSession.AuthToken = auth.token;
+                _ = _myApiSession.WebRequestApi.SaveCookies();
                 return auth;
             }
         }
+
         throw new Exception($"Failed to get auth: {status} {responseJson}");
     }
 
-    public async Task<bool> Email2Fa(string code)
+    public async Task<(AuthResult, string)> EmailTwoFa(string code)
     {
-        var (status, responseJson) = await _myUserSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
+        var (status, responseJson) = await _myApiSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
         {
             url = "auth/twofactorauth/emailotp/verify",
             method = HttpMethod.Post,
-            body = JsonConvert.SerializeObject(new Request.TwoFa
+            body = JsonConvert.SerializeObject(new TwoFa
             {
                 code = code
             })
         });
         if (status != HttpStatusCode.OK)
         {
-            return false;
+            return (AuthResult.Error, "Invalid email code");
         }
+
         var response = JsonConvert.DeserializeObject<Response.TwoFa>(responseJson);
-        return response.verified;
+        if (response.verified)
+        {
+            return (AuthResult.Success, string.Empty);
+        }
+
+        return (AuthResult.EmailRequired, string.Empty);
     }
 
-    public async Task<bool> Totp2Fa(string code)
+    public async Task<(AuthResult, string)> TotpTwoFa(string code)
     {
-        var (status, responseJson) = await _myUserSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
+        var (status, responseJson) = await _myApiSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
         {
             url = "auth/twofactorauth/totp/verify",
             method = HttpMethod.Post,
-            body = JsonConvert.SerializeObject(new Request.TwoFa
+            body = JsonConvert.SerializeObject(new TwoFa
             {
                 code = code
             })
         });
         if (status != HttpStatusCode.OK)
         {
-            return false;
+            return (AuthResult.Error, string.Empty);
         }
+
         var response = JsonConvert.DeserializeObject<Response.TwoFa>(responseJson);
-        return response.verified;
+        if (response.verified)
+        {
+            return (AuthResult.Success, "Invalid TOTP code");
+        }
+
+        return (AuthResult.TotpRequired, string.Empty);
     }
 }

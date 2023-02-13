@@ -2,22 +2,15 @@
 
 namespace VrcSdk;
 
-public class Config
+public partial class ApiSession
 {
-    private UserSession _myUserSession;
-
-    public Config(UserSession userSession)
-    {
-        _myUserSession = userSession;
-    }
-
-    public async Task<dynamic> Fetch()
-    {
-        var (status, responseJson) = await _myUserSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
-        {
-            url = "config",
-            method = HttpMethod.Get
-        });
-        return JsonConvert.DeserializeObject(responseJson);
-    }
+	public async Task<dynamic> GetConfig()
+	{
+		var (status, responseJson) = await WebRequestApi.DoRequest(new WebRequestApi.RequestData
+		{
+			url = "config",
+			method = HttpMethod.Get
+		});
+		return JsonConvert.DeserializeObject(responseJson);
+	}
 }

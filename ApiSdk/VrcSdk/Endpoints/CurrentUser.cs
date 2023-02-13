@@ -4,26 +4,19 @@ using Newtonsoft.Json;
 
 namespace VrcSdk;
 
-public class CurrentUser
+public partial class ApiSession
 {
-    private UserSession _myUserSession;
-
-    public CurrentUser(UserSession userSession)
-    {
-        _myUserSession = userSession;
-    }
-
-    public async Task<bool> Fetch()
-    {
-        var (status, responseJson) = await _myUserSession.WebRequestApi.DoRequest(new WebRequestApi.RequestData
-        {
-            url = "auth/user",
-            method = HttpMethod.Get
-        });
-        if (status == HttpStatusCode.OK)
-        {
-            return true;
-        }
-        return false;
-    }
+	public async Task<bool> GetCurrentUser()
+	{
+		var (status, responseJson) = await WebRequestApi.DoRequest(new WebRequestApi.RequestData
+		{
+			url = "auth/user",
+			method = HttpMethod.Get
+		});
+		if (status == HttpStatusCode.OK)
+		{
+			return true;
+		}
+		return false;
+	}
 }
